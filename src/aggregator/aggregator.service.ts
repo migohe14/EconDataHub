@@ -9,8 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
-export class AgregatorService {
-  private readonly logger = new Logger(AgregatorService.name);
+export class aggregatorService {
+  private readonly logger = new Logger(aggregatorService.name);
   private readonly apiKey: string;
   private readonly bamlSeriesId: string;
   private readonly bamlEuroSeriesId: string;

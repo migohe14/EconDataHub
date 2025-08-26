@@ -1,4 +1,4 @@
-Agregator API – Economic Indicators
+aggregator API – Economic Indicators
 
 ICE BofA US High Yield Index Option-Adjusted Spread (BAMLH0A0HYM2)
 Description: Spread between US high-yield bonds and US Treasury bonds, adjusted for options.
