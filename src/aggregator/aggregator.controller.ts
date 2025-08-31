@@ -86,7 +86,9 @@ export class AggregatorController {
   }
 
   @Post('analysis')
-  async analyzeMarket(@Body() body: MarketViewAnalysisBody): Promise<string> {
+  async analyzeMarket(
+    @Body() body: MarketViewAnalysisBody,
+  ): Promise<{ report: string }> {
     const { query } = body;
     if (!query) {
       throw new BadRequestException('Analysis query is required.');
@@ -127,6 +129,7 @@ export class AggregatorController {
 
     console.log(marketData);
 
-    return this.analysisService.analyzeData(query, marketData);
+    const analysisText = await this.analysisService.analyzeData(query, marketData);
+    return { report: analysisText };
   }
 }

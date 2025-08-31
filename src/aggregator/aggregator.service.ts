@@ -155,7 +155,7 @@ export class AggregatorService  {
     }
 
     const latestValueStr = observations[0].value;
-    const previousValueStr = observations[1].value;
+    const previousValueStr = observations[observations.length - 1].value;
 
 
     if (latestValueStr === '.' || previousValueStr === '.') {
