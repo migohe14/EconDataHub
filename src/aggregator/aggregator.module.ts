@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { aggregatorController } from './aggregator.controller';
-import { aggregatorService } from './aggregator.service';
+import { AggregatorController } from './aggregator.controller';
+import { AggregatorService } from './aggregator.service';
 import { AnalysisService } from './analysis.service'; 
 import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [ConfigModule.forRoot(), HttpModule],
-  controllers: [aggregatorController],
-  providers: [aggregatorService, AnalysisService]
+  controllers: [AggregatorController],
+  providers: [AggregatorService, AnalysisService]
 })
-export class aggregatorModule {}
+export class AggregatorModule {}

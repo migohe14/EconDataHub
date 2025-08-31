@@ -15,3 +15,23 @@ Significance: Indicates long-term interest rate expectations in the US economy.
 10-Year Long-Term Government Bond Yields – Germany (IRLTLT01DEM156N)
 Description: Yield of 10-year German government bonds, including benchmark bonds.
 Significance: Reflects investor expectations for Germany’s economic stability and inflation outlook.
+
+
+#Unemployment
+
+UK
+Infra-Annual Labor Statistics: Monthly Unemployment Rate Total: 15 Years or over for United Kingdom (LRHUTTTTGBM156S)
+https://fred.stlouisfed.org/series/LRHUTTTTGBM156S
+
+
+Germany
+Infra-Annual Labor Statistics: Monthly Unemployment Rate Total: 15 Years or over for Germany (LRHUTTTTDEM156S)
+https://fred.stlouisfed.org/series/LRHUTTTTDEM156S
+
+France
+Infra-Annual Labor Statistics: Unemployment Rate Total: From 15 to 74 Years for France (LRUN74TTFRQ156S)
+https://fred.stlouisfed.org/series/LRUN74TTFRQ156S
+
+
+Spain
+Infra-Annual Labor Statistics: Unemployment Rate Total: From 15 to 64 Years for Spain (LRUN64TTESQ156S)https://fred.stlouisfed.org/series/LRUN64TTESQ156S

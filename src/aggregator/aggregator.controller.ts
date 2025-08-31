@@ -3,22 +3,19 @@ import {
   Controller,
   DefaultValuePipe,
   Get,
-  NotFoundException,
-  Param,
   ParseIntPipe,
   Post,
   Query,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
-import { aggregatorService } from './aggregator.service';
+import { AggregatorService } from './aggregator.service';
 import { AnalysisService } from './analysis.service';
-
-interface AnalysisRequestBody {
-  query: string;
-}
+import type { MarketViewAnalysisBody } from './aggregator.model';
 
 @Controller('aggregator')
-export class aggregatorController {
-  constructor(private readonly aggregatorService: aggregatorService,
+export class AggregatorController {
+  constructor(private readonly aggregatorService: AggregatorService,
     private readonly analysisService: AnalysisService) {}
 
   @Get('series/usa-high-yield') 
@@ -56,36 +53,80 @@ export class aggregatorController {
     return this.aggregatorService.getGermanyTreasuryObservations(sortOrder, limit);
   }
 
-  @Post('analysis/:seriesId')
-  async analyzeSeries(
-    @Param('seriesId') seriesId: string,
-    @Body() body: AnalysisRequestBody,
+  @Get('series/uk-unemployment')
+  async getUkUnemploymentObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
+    return this.aggregatorService.getUkUnemploymentObservations(sortOrder, limit);
+  }
+
+  @Get('series/germany-unemployment')
+  async getGermanyUnemploymentObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getGermanyUnemploymentObservations(sortOrder, limit);
+  }
+
+  @Get('series/france-unemployment')
+  async getFranceUnemploymentObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getFranceUnemploymentObservations(sortOrder, limit);
+  }
+
+  @Get('series/spain-unemployment')
+  async getSpainUnemploymentObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getSpainUnemploymentObservations(sortOrder, limit);
+  }
+
+  @Post('analysis')
+  async analyzeMarket(@Body() body: MarketViewAnalysisBody): Promise<string> {
     const { query } = body;
     if (!query) {
-      throw new NotFoundException('Analysis query is required.');
+      throw new BadRequestException('Analysis query is required.');
     }
 
-    let data;
-    // Usamos un switch para obtener los datos de la serie correcta.
-    // Podríamos usar una estrategia más avanzada (como un mapa) si las series crecen.
-    switch (seriesId) {
-      case 'usa-high-yield':
-        data = await this.aggregatorService.getusaHighYieldObservations('desc', 100); // Obtenemos más datos para un mejor análisis
-        break;
-      case 'euro-high-yield':
-        data = await this.aggregatorService.geteuroHighYieldObservations('desc', 100);
-        break;
-      case 'usa-treasury':
-        data = await this.aggregatorService.getUsaTreasuryObservations('desc', 100);
-        break;
-      case 'germany-treasury':
-        data = await this.aggregatorService.getGermanyTreasuryObservations('desc', 100);
-        break;
-      default:
-        throw new NotFoundException(`Series with id "${seriesId}" not found.`);
+    const idsToAnalyze =
+      body.seriesIds && body.seriesIds.length > 0
+        ? body.seriesIds
+        : this.aggregatorService.getAvailableSeriesIds();
+
+    const summaryPromises = idsToAnalyze.map(async (id) => {
+      try {
+        const summary = await this.aggregatorService.getSeriesSummary(id);
+        return { [id.replace(/-/g, '_')]: summary };
+      } catch (error) {
+        this.aggregatorService.logError(
+          `Could not get summary for ${id}: ${error.message}`,
+          error.stack,
+        );
+        return null;
+      }
+    });
+
+    const summariesArray = (await Promise.all(summaryPromises)).filter(
+      (s) => s !== null,
+    );
+
+    if (summariesArray.length === 0) {
+      throw new NotFoundException(
+        'Could not retrieve data for any of the requested series.',
+      );
     }
 
-    return this.analysisService.analyzeData(query, data.observations);
+    const marketData = summariesArray.reduce(
+      (acc, curr) => ({ ...acc, ...curr }),
+      {},
+    );
+
+    console.log(marketData);
+
+    return this.analysisService.analyzeData(query, marketData);
   }
 }
