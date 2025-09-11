@@ -28,7 +28,9 @@ export class AnalysisService {
  async analyzeData(
     query: string,
     data: Record<string, SeriesSummary>,
-  ): Promise<string> {    const dataAsString = JSON.stringify(data, null, 2);
+  ): Promise<string> {    
+    
+    const dataAsString = JSON.stringify(data, null, 2);
 
     // Un prompt bien diseñado es clave para obtener buenos resultados.
     const prompt = `
@@ -36,11 +38,14 @@ export class AnalysisService {
 
       The data is a JSON object where each key is a series ID and the value is an object containing:
       - "indicator": The name of the economic indicator.
+      - "unit": The unit of measurement for the indicator (e.g., "percentage"). This field is optional.
       - "country": The country or region for the indicator.
-      - "latest_value": The most recent value of the indicator.
-      - "previous_value": The value before the latest one.
+      - "latest_value": The most recent value of the indicator, corresponding to "observation_end".
+      - "previous_value": The value from the start of the period, corresponding to "observation_start".
       - "change": The absolute change between the latest and previous value.
-      - "change_pct": The percentage change.
+      - "change_pct": The percentage change over the period.
+      - "observation_start": The start date for the data period.
+      - "observation_end": The end date for the data period.
 
       User's Question: "${query}"
 
@@ -49,7 +54,7 @@ export class AnalysisService {
       ${dataAsString}
       \`\`\`
 
-      Provide a concise and clear analysis based only on the data provided. When mentioning values, include their dates for context.
+      Provide a concise and clear analysis based only on the data provided. When mentioning values, include their dates ("observation_start" and "observation_end") for context.
     `;
 
     const messages = [new HumanMessage(prompt)];

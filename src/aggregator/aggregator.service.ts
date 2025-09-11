@@ -23,6 +23,10 @@ export class AggregatorService  {
   private readonly germanyUnemploymentSeriesId: string;
   private readonly franceUnemploymentSeriesId: string;
   private readonly spainUnemploymentSeriesId: string;
+  private readonly franceBond10YSeriesId: string;
+  private readonly italyBond10YSeriesId: string;
+  private readonly spainBond10YSeriesId: string;
+  private readonly ukBond10YSeriesId: string;
 
   private readonly fredApiUrl = 'https://api.stlouisfed.org/fred';
 
@@ -39,9 +43,9 @@ export class AggregatorService  {
     this.apiKey = this.getConfigValue('FRED_API_KEY');
     this.bamlSeriesId = this.getConfigValue('FRED_USA_YIELD_SERIES_ID');
     this.bamlEuroSeriesId = this.getConfigValue('FRED_EURO_YIELD_SERIES_ID');
-    this.usaTreasurySeriesId = this.getConfigValue('FRED_USATREASURY_SERIES_ID');
+    this.usaTreasurySeriesId = this.getConfigValue('USA_TREASURY_10Y');
     this.germanyTreasurySeriesId = this.getConfigValue(
-      'FRED_GERMANY_YIELD_SERIES_ID',
+      'GERMANY_BUND_10Y',
     );
     this.ukUnemploymentSeriesId = this.getConfigValue(
       'FRED_UK_UNEMPLOYMENT_SERIES_ID',
@@ -55,6 +59,16 @@ export class AggregatorService  {
     this.spainUnemploymentSeriesId = this.getConfigValue(
       'FRED_SPAIN_UNEMPLOYMENT_SERIES_ID',
     );
+    this.franceBond10YSeriesId = this.getConfigValue(
+      'FRED_FRANCE_BOND_10Y_SERIES_ID',
+    );
+    this.italyBond10YSeriesId = this.getConfigValue(
+      'FRED_ITALY_BOND_10Y_SERIES_ID',
+    );
+    this.spainBond10YSeriesId = this.getConfigValue(
+      'FRED_SPAIN_BOND_10Y_SERIES_ID',
+    );
+    this.ukBond10YSeriesId = this.getConfigValue('UK_BOND_10Y');
 
     this.seriesIdMapping = {
       'usa-high-yield': this.bamlSeriesId,
@@ -65,6 +79,10 @@ export class AggregatorService  {
       'germany-unemployment': this.germanyUnemploymentSeriesId,
       'france-unemployment': this.franceUnemploymentSeriesId,
       'spain-unemployment': this.spainUnemploymentSeriesId,
+      'france-bond-10y': this.franceBond10YSeriesId,
+      'italy-bond-10y': this.italyBond10YSeriesId,
+      'spain-bond-10y': this.spainBond10YSeriesId,
+      'uk-bond-10y': this.ukBond10YSeriesId,
     };
 
     this.seriesMetadata = {
@@ -90,6 +108,26 @@ export class AggregatorService  {
         indicator: 'rate_unemployment',
         unit: 'percentage',
         country: 'spain',
+      },
+      'france-bond-10y': {
+        indicator: '10y_bond_yield',
+        unit: 'percentage',
+        country: 'france',
+      },
+      'italy-bond-10y': {
+        indicator: '10y_bond_yield',
+        unit: 'percentage',
+        country: 'italy',
+      },
+      'spain-bond-10y': {
+        indicator: '10y_bond_yield',
+        unit: 'percentage',
+        country: 'spain',
+      },
+      'uk-bond-10y': {
+        indicator: '10y_bond_yield',
+        unit: 'percentage',
+        country: 'uk',
       },
     };
   }
@@ -126,6 +164,32 @@ export class AggregatorService  {
     return this.fetchFredSeriesObservations(this.spainUnemploymentSeriesId, sortOrder, limit);
   }
 
+  async getFranceBond10YObservations(
+    sortOrder: string,
+    limit: number,
+  ): Promise<FredSeriesObservationsResponse> {
+    return this.fetchFredSeriesObservations(
+      this.franceBond10YSeriesId,
+      sortOrder,
+      limit,
+    );
+  }
+
+  async getItalyBond10YObservations(
+    sortOrder: string,
+    limit: number,
+  ): Promise<FredSeriesObservationsResponse> {
+    return this.fetchFredSeriesObservations(this.italyBond10YSeriesId, sortOrder, limit);
+  }
+
+  async getSpainBond10YObservations(sortOrder: string, limit: number): Promise<FredSeriesObservationsResponse> {
+    return this.fetchFredSeriesObservations(this.spainBond10YSeriesId, sortOrder, limit);
+  }
+
+  async getUkBond10YObservations(sortOrder: string, limit: number): Promise<FredSeriesObservationsResponse> {
+    return this.fetchFredSeriesObservations(this.ukBond10YSeriesId, sortOrder, limit);
+  }
+
   getAvailableSeriesIds(): string[] {
     return Object.keys(this.seriesMetadata);
   }
@@ -140,41 +204,59 @@ export class AggregatorService  {
       throw new NotFoundException(`Series metadata not found for id: ${seriesId}`);
     }
 
-    const data = await this.fetchFredSeriesObservations(apiId, 'desc', 2);
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(endDate.getFullYear() - 1);
+
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+    const observation_start_param = formatDate(startDate);
+    const observation_end_param = formatDate(endDate);
+
+    const data = await this.fetchFredSeriesObservations(
+      apiId,
+      'asc',
+      undefined,
+      observation_start_param,
+      observation_end_param,
+    );
     const { observations } = data;
 
-    const observation_start = observations[observations.length - 1].date;
-    const observation_end = observations[0].date;
-
-
-
     if (observations.length < 2) {
-      const errorMessage = `Not enough data for series ${seriesId} to create summary.`;
+      const errorMessage = `Not enough data for series ${seriesId} to create summary for the last year.`;
       this.logger.warn(errorMessage);
       throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
     }
 
-    const latestValueStr = observations[0].value;
-    const previousValueStr = observations[observations.length - 1].value;
+    const previousObservation = observations[0];
+    const latestObservation = observations[observations.length - 1];
 
+    const observation_start = previousObservation.date;
+    const observation_end = latestObservation.date;
+
+    const latestValueStr = latestObservation.value;
+    const previousValueStr = previousObservation.value;
 
     if (latestValueStr === '.' || previousValueStr === '.') {
       const errorMessage = `Invalid data points for series ${seriesId}.`;
       this.logger.warn(errorMessage);
       throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
     }
-
     const latest_value = parseFloat(latestValueStr);
     const previous_value = parseFloat(previousValueStr);
     const change = latest_value - previous_value;
     const change_pct =
       previous_value !== 0 ? (change / previous_value) * 100 : 0;
-
     const metadata = this.seriesMetadata[seriesId];
 
     return {
       ...metadata,
-      latest_value, previous_value, change, change_pct, observation_start, observation_end
+      latest_value,
+      previous_value,
+      change,
+      change_pct,
+      observation_start,
+      observation_end,
     };
   }
 
@@ -189,7 +271,9 @@ export class AggregatorService  {
   private async fetchFredSeriesObservations(
     seriesId: string,
     sortOrder: string,
-    limit: number,
+    limit?: number, // limit is now optional and can be undefined
+    observation_start?: string,
+    observation_end?: string,
   ): Promise<FredSeriesObservationsResponse> {
     const url = `${this.fredApiUrl}/series/observations`;
     try {
@@ -201,6 +285,8 @@ export class AggregatorService  {
             file_type: 'json',
             sort_order: sortOrder,
             limit,
+            observation_start,
+            observation_end,
           },
         }),
       );

@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AggregatorService } from './aggregator.service';
 import { AnalysisService } from './analysis.service';
-import type { MarketViewAnalysisBody } from './aggregator.model';
+import type { MarketViewAnalysisBody, SeriesSummary } from './aggregator.model';
 
 @Controller('aggregator')
 export class AggregatorController {
@@ -85,10 +85,54 @@ export class AggregatorController {
     return this.aggregatorService.getSpainUnemploymentObservations(sortOrder, limit);
   }
 
+  @Get('series/france-bond-10y')
+  async getFranceBond10YObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getFranceBond10YObservations(
+      sortOrder,
+      limit,
+    );
+  }
+
+  @Get('series/italy-bond-10y')
+  async getItalyBond10YObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getItalyBond10YObservations(
+      sortOrder,
+      limit,
+    );
+  }
+
+  @Get('series/spain-bond-10y')
+  async getSpainBond10YObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getSpainBond10YObservations(
+      sortOrder,
+      limit,
+    );
+  }
+
+  @Get('series/uk-bond-10y')
+  async getUkBond10YObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getUkBond10YObservations(
+      sortOrder,
+      limit,
+    );
+  }
+
   @Post('analysis')
   async analyzeMarket(
     @Body() body: MarketViewAnalysisBody,
-  ): Promise<{ report: string }> {
+  ): Promise<{ report: string; marketData: Record<string, SeriesSummary> }> {
     const { query } = body;
     if (!query) {
       throw new BadRequestException('Analysis query is required.');
@@ -122,7 +166,7 @@ export class AggregatorController {
       );
     }
 
-    const marketData = summariesArray.reduce(
+    const marketData: Record<string, SeriesSummary> = summariesArray.reduce(
       (acc, curr) => ({ ...acc, ...curr }),
       {},
     );
@@ -130,6 +174,6 @@ export class AggregatorController {
     console.log(marketData);
 
     const analysisText = await this.analysisService.analyzeData(query, marketData);
-    return { report: analysisText };
+    return { report: analysisText, marketData };
   }
 }
