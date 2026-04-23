@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai'; // Necesitas instalar esto
 import { HumanMessage } from '@langchain/core/messages';
 import * as dotenv from 'dotenv';
 import { SeriesSummary } from './aggregator.model';
@@ -8,31 +9,33 @@ dotenv.config();
 
 @Injectable()
 export class AnalysisService {
-  private llm: ChatOpenAI;
+  private openaiLlm: ChatOpenAI;
+  private geminiLlm: ChatGoogleGenerativeAI;
+  private readonly logger = new Logger(AnalysisService.name);
 
   constructor() {
-    // Inicializa el modelo de lenguaje. Puedes ajustar la temperatura para controlar la creatividad.
-    this.llm = new ChatOpenAI({
+    // Inicialización de OpenAI
+    this.openaiLlm = new ChatOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      modelName: 'gpt-4o-nano', // Un modelo rápido y económico, ideal para empezar
+      modelName: 'gpt-4o-mini',
+      temperature: 0.2,
+      maxRetries: 0, // Desactivamos reintentos automáticos para saltar rápido al fallback
+    });
+
+    // Inicialización de Gemini
+    this.geminiLlm = new ChatGoogleGenerativeAI({
+      apiKey: process.env.GOOGLE_API_KEY, // Añade esta variable en Render
+      modelName: 'gemini-2.5-flash',
       temperature: 0.2,
     });
   }
 
-  /**
-   * Analiza un conjunto de datos utilizando un LLM.
-   * @param query La pregunta del usuario en lenguaje natural.
-   * @param data Los datos a analizar (por ejemplo, observaciones de series de tiempo).
-   * @returns Una respuesta generada por el LLM.
-   */
- async analyzeData(
+  async analyzeData(
     query: string,
     data: Record<string, SeriesSummary>,
-  ): Promise<string> {    
-    
+  ): Promise<string> {
     const dataAsString = JSON.stringify(data, null, 2);
 
-    // Un prompt bien diseñado es clave para obtener buenos resultados.
     const prompt = `
     You are an expert financial analyst. Your task is to analyze the provided summary of economic indicators and answer the user's question based on it. Your response must be in Spanish.
 
@@ -58,8 +61,24 @@ export class AnalysisService {
     `;
 
     const messages = [new HumanMessage(prompt)];
-    const result = await this.llm.invoke(messages);
 
-    return result.content.toString();
+    try {
+      // Intento 1: OpenAI
+      this.logger.log('Intentando análisis con OpenAI...');
+      const result = await this.openaiLlm.invoke(messages);
+      return result.content.toString();
+    } catch (error) {
+      // Si falla OpenAI (por cuota o cualquier error), entramos aquí
+      this.logger.error('OpenAI falló (posible falta de cuota). Cambiando a Gemini...');
+      
+      try {
+        // Intento 2: Gemini
+        const result = await this.geminiLlm.invoke(messages);
+        return result.content.toString();
+      } catch (geminiError) {
+        this.logger.error('Gemini también falló.');
+        return 'Lo siento, los servicios de análisis no están disponibles en este momento por límites de cuota.';
+      }
+    }
   }
 }
