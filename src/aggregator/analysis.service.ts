@@ -14,7 +14,7 @@ export class AnalysisService {
     // Inicializa el modelo de lenguaje. Puedes ajustar la temperatura para controlar la creatividad.
     this.llm = new ChatOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      modelName: 'gpt-4o-mini', // Un modelo rápido y económico, ideal para empezar
+      modelName: 'gpt-4o-nano', // Un modelo rápido y económico, ideal para empezar
       temperature: 0.2,
     });
   }
