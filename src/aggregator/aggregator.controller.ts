@@ -129,6 +129,14 @@ export class AggregatorController {
     );
   }
 
+  @Get('series/brent-crude-oil')
+  async getBrentCrudeOilObservations(
+    @Query('sort_order', new DefaultValuePipe('desc')) sortOrder: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.aggregatorService.getBrentCrudeOilObservations(sortOrder, limit);
+  }
+
   @Post('analysis')
   async analyzeMarket(
     @Body() body: MarketViewAnalysisBody,

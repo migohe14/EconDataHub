@@ -27,6 +27,7 @@ export class AggregatorService  {
   private readonly italyBond10YSeriesId: string;
   private readonly spainBond10YSeriesId: string;
   private readonly ukBond10YSeriesId: string;
+  private readonly brentCrudeOilSeriesId = 'POILBREUSDM';
 
   private readonly fredApiUrl = 'https://api.stlouisfed.org/fred';
 
@@ -83,6 +84,7 @@ export class AggregatorService  {
       'italy-bond-10y': this.italyBond10YSeriesId,
       'spain-bond-10y': this.spainBond10YSeriesId,
       'uk-bond-10y': this.ukBond10YSeriesId,
+      'brent-crude-oil': this.brentCrudeOilSeriesId,
     };
 
     this.seriesMetadata = {
@@ -128,6 +130,11 @@ export class AggregatorService  {
         indicator: '10y_bond_yield',
         unit: 'percentage',
         country: 'uk',
+      },
+      'brent-crude-oil': {
+        indicator: 'crude_oil_price',
+        unit: 'USD/barrel',
+        country: 'global',
       },
     };
   }
@@ -188,6 +195,10 @@ export class AggregatorService  {
 
   async getUkBond10YObservations(sortOrder: string, limit: number): Promise<FredSeriesObservationsResponse> {
     return this.fetchFredSeriesObservations(this.ukBond10YSeriesId, sortOrder, limit);
+  }
+
+  async getBrentCrudeOilObservations(sortOrder: string, limit: number): Promise<FredSeriesObservationsResponse> {
+    return this.fetchFredSeriesObservations(this.brentCrudeOilSeriesId, sortOrder, limit);
   }
 
   getAvailableSeriesIds(): string[] {

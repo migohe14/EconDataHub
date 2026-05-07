@@ -237,9 +237,10 @@
             transition: left 0.5s ease, width 0.5s ease;
         }
 
-        .timeline-bar.cat-spread  { background: var(--accent); }
-        .timeline-bar.cat-bond    { background: var(--orange); }
-        .timeline-bar.cat-unemp   { background: #a78bfa; }
+        .timeline-bar.cat-spread     { background: var(--accent); }
+        .timeline-bar.cat-bond       { background: var(--orange); }
+        .timeline-bar.cat-unemp      { background: #a78bfa; }
+        .timeline-bar.cat-commodity  { background: var(--green); }
 
         .timeline-duration {
             position: absolute; right: -4px; top: 50%; transform: translate(100%, -50%);
@@ -457,6 +458,7 @@
             italy:     { name: 'Italia',       flag: '\u{1F1EE}\u{1F1F9}' },
             spain:     { name: 'España',       flag: '\u{1F1EA}\u{1F1F8}' },
             uk:        { name: 'R. Unido',     flag: '\u{1F1EC}\u{1F1E7}' },
+            global:    { name: 'Global',        flag: '\u{1F30D}' },
         };
 
         const INDICATOR_LABELS = {
@@ -465,23 +467,27 @@
             '10y_bund_yield': 'Bund 10Y',
             '10y_bond_yield': 'Bono 10Y',
             rate_unemployment: 'Desempleo',
+            crude_oil_price: 'Precio Petróleo',
         };
 
         const CATEGORY_ORDER = [
             { key: 'high_yield_spread', title: 'Diferenciales de Alto Rendimiento' },
             { key: 'bond',              title: 'Rendimientos de Bonos Soberanos (10 Años)' },
             { key: 'rate_unemployment', title: 'Tasas de Desempleo' },
+            { key: 'commodity',         title: 'Materias Primas' },
         ];
 
         function categorize(indicator) {
             if (indicator === 'high_yield_spread') return 'high_yield_spread';
             if (indicator === 'rate_unemployment') return 'rate_unemployment';
+            if (indicator === 'crude_oil_price') return 'commodity';
             return 'bond';
         }
 
         function catClass(indicator) {
             if (indicator === 'high_yield_spread') return 'cat-spread';
             if (indicator === 'rate_unemployment') return 'cat-unemp';
+            if (indicator === 'crude_oil_price') return 'cat-commodity';
             return 'cat-bond';
         }
 
@@ -520,6 +526,15 @@
         /* ========================================================
            1. TREND OVERVIEW — diverging horizontal bar chart
            ======================================================== */
+        function isGoodChange(item) {
+            // For unemployment, an increase is bad; invert the colour logic
+            // For crude oil, no directional preference
+            const up = item.change_pct >= 0;
+            if (item.indicator === 'rate_unemployment') return !up;
+            if (item.indicator === 'crude_oil_price') return !up;
+            return up;
+        }
+
         function renderTrends(items) {
             const panel = document.getElementById('trendPanel');
             const sorted = [...items].sort((a, b) => a.change_pct - b.change_pct);
@@ -529,6 +544,7 @@
             for (const item of sorted) {
                 const pct = item.change_pct;
                 const isPos = pct >= 0;
+                const good = isGoodChange(item);
                 const halfWidth = (Math.abs(pct) / maxAbs) * 50; // 50% = half the track
                 const barLeft = isPos ? 50 : 50 - halfWidth;
 
@@ -539,10 +555,10 @@
                         ${item.meta.name} · ${item.label}
                     </div>
                     <div class="trend-bar-track">
-                        <div class="trend-bar-fill ${isPos ? 'positive' : 'negative'}"
+                        <div class="trend-bar-fill ${good ? 'positive' : 'negative'}"
                              style="left:${barLeft}%; width:${halfWidth}%;"></div>
                     </div>
-                    <div class="trend-pct ${isPos ? 'positive' : 'negative'}">${fmtPct(pct)}</div>
+                    <div class="trend-pct ${good ? 'positive' : 'negative'}">${fmtPct(pct)}</div>
                 </div>`;
             }
 
@@ -627,6 +643,7 @@
                 <span><span class="swatch" style="background:var(--accent)"></span> HY Spread</span>
                 <span><span class="swatch" style="background:var(--orange)"></span> Bonos 10Y</span>
                 <span><span class="swatch" style="background:#a78bfa"></span> Desempleo</span>
+                <span><span class="swatch" style="background:#34d399"></span> Materias Primas</span>
             </div>`;
 
             panel.innerHTML = html;
@@ -658,15 +675,16 @@
 
                 for (const item of catItems) {
                     const isPositive = item.change_pct >= 0;
+                    const good = isGoodChange(item);
                     const arrow = isPositive ? '\u25B2' : '\u25BC';
                     const barWidth = Math.min(Math.abs(item.change_pct) / 30 * 100, 100);
-                    const barColor = isPositive ? 'var(--green)' : 'var(--red)';
+                    const barColor = good ? 'var(--green)' : 'var(--red)';
                     const durCls = durationClass(item.months);
 
                     // Mini SVG trend arrow
                     const trendSvg = isPositive
-                        ? '<svg width="20" height="16" viewBox="0 0 20 16"><path d="M2 12 L10 4 L18 12" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
-                        : '<svg width="20" height="16" viewBox="0 0 20 16"><path d="M2 4 L10 12 L18 4" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+                        ? `<svg width="20" height="16" viewBox="0 0 20 16"><path d="M2 12 L10 4 L18 12" stroke="${good ? 'var(--green)' : 'var(--red)'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`
+                        : `<svg width="20" height="16" viewBox="0 0 20 16"><path d="M2 4 L10 12 L18 4" stroke="${good ? 'var(--green)' : 'var(--red)'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
 
                     grid.innerHTML += `
                         <div class="card">
@@ -684,7 +702,7 @@
                                 </div>
                                 <span class="card-trend-arrow">${trendSvg}</span>
                             </div>
-                            <span class="card-change ${isPositive ? 'positive' : 'negative'}">
+                            <span class="card-change ${good ? 'positive' : 'negative'}">
                                 ${arrow} ${fmtPct(item.change_pct)}
                             </span>
                             <div class="card-bar">
